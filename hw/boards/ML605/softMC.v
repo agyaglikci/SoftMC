@@ -47,7 +47,6 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	input											dfi_rddata_valid_even,
 	input											dfi_rddata_valid_odd,
 	// DFI Initialization Status / CLK Disable
-	output                              dfi_dram_clk_disable,
 	input                               dfi_init_complete,
 	// sideband signals
 	output                              io_config_strobe,
@@ -329,7 +328,6 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	 .aref_trfc(aref_trfc_in)
     );
 	
-	
 	assign iq_full = instr0_fifo_full | instr1_fifo_full;
 	assign processing_iseq = dispatcher_busy;
 	
@@ -365,6 +363,5 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		.rdback_fifo_wren(rdback_fifo_wren),
 		.rdback_fifo_wrdata(rdback_fifo_wrdata)
 	);
-
 
 endmodule

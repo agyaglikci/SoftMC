@@ -338,7 +338,6 @@ module softMC_top #
     .dfi_rddata_valid(dfi_rddata_valid), 
 	 .dfi_rddata_valid_even(dfi_rddata_valid_even),
     .dfi_rddata_valid_odd(dfi_rddata_valid_odd), 
-    .dfi_dram_clk_disable(dfi_dram_clk_disable), 
     .dfi_init_complete(dfi_init_complete), 
 	 
 	 //sideband signals
@@ -427,7 +426,6 @@ module softMC_top #
 	.dfi_rddata_valid_even(dfi_rddata_valid_even),
 	.dfi_rddata_valid_odd(dfi_rddata_valid_odd),
 	// DFI Initialization Status / CLK Disable
-	.dfi_dram_clk_disable(dfi_dram_clk_disable),
 	.dfi_init_complete(dfi_init_complete),
 	// sideband signals
 	.io_config_strobe(io_config_strobe),
