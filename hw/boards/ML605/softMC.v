@@ -14,6 +14,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	input[31:0] app_instr, 
 	output iq_full,
 	output processing_iseq,
+	output looping,
 	
 	// DFI Control/Address
 	output [ROW_WIDTH-1:0]              dfi_address0,
@@ -56,7 +57,6 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	output rdback_fifo_empty,
 	input rdback_fifo_rden,
 	output[DQ_WIDTH*4 - 1:0] rdback_data,
-	
 	output process_iseq_host
 );
 	 
@@ -78,6 +78,12 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	 wire pr_rd_req, zq_req, autoref_req;
 	 wire pr_rd_ack, zq_ack, autoref_ack;
 	 
+	 // Bank State signals
+	 wire [31:0] issued_instr;
+ 	 wire is_issued_app_instr, is_issued_mnt_instr;
+	 wire [BANK_WIDTH-1 : 0] maint_bank;
+	 wire [ROW_WIDTH-1  : 0] maint_bank_state;
+	 
 	 //Auto-refresh signals
 	 wire aref_en;
 	 wire[27:0] aref_interval;
@@ -89,47 +95,50 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	 maint_ctrl_top #(.RANK_WIDTH(RANK_WIDTH), .TCQ (TCQ), .tCK(tCK), 
 							.nCK_PER_CLK(nCK_PER_CLK), .MAINT_PRESCALER_PERIOD(MAINT_PRESCALER_PERIOD)) 
 	 i_maint_ctrl(
-	  .clk(clk),
-	  .rst(rst),
-	
-	  .dfi_init_complete(dfi_init_complete),
- 	
- 	  .periodic_rd_ack(pr_rd_ack),
-	  .periodic_rd_req(pr_rd_req),
-	  .zq_ack(zq_ack),
-	  .zq_req(zq_req),
-	  
-	  //Auto-refresh
-	  .autoref_en(aref_en),
-	  .autoref_interval(aref_interval),
-	  .autoref_ack(autoref_ack),
-	  .autoref_req(autoref_req)
+		.clk(clk),
+		.rst(rst),
+
+		.dfi_init_complete(dfi_init_complete),
+
+		  .periodic_rd_ack(pr_rd_ack),
+		.periodic_rd_req(pr_rd_req),
+		.zq_ack(zq_ack),
+		.zq_req(zq_req),
+
+		//Auto-refresh
+		.autoref_en(aref_en),
+		.autoref_interval(aref_interval),
+		.autoref_ack(autoref_ack),
+		.autoref_req(autoref_req)
     );
 	 
-	 wire periodic_read_lock;
+	 wire periodic_read_lock, pr_rd_req_handler_in;
 	 wire maint_en;
 	 wire maint_ack;
-	 wire[31:0] maint_instr;
+	 wire [31:0] maint_instr;
 	 
-	 maint_handler #(.CS_WIDTH(CS_WIDTH)) i_maint_handler(
-			.clk(clk),
-			.rst(rst),
-			
-			.pr_rd_req(pr_rd_req),
-			.zq_req(zq_req),
-			.autoref_req(autoref_req),
-			.cur_bus_dir(dfi_odt0 ? `BUS_DIR_WRITE : `BUS_DIR_READ),
-			
-			.maint_instr_en(maint_en),
-			.maint_ack(maint_ack),
-			.maint_instr(maint_instr),
-			
-			.pr_rd_ack(pr_rd_ack), //comes from the transaction dispatcher
-			.zq_ack(zq_ack),
-			.autoref_ack(autoref_ack),
-			.periodic_read_lock(periodic_read_lock),
-			
-			.trfc(aref_trfc)
+	 maint_handler #(.CS_WIDTH(CS_WIDTH),.BANK_WIDTH(BANK_WIDTH),.ROW_WIDTH(ROW_WIDTH)) i_maint_handler(
+		.clk(clk),
+		.rst(rst),
+		
+		.pr_rd_req(pr_rd_req_handler_in),
+		.zq_req(zq_req),
+		.autoref_req(autoref_req),
+		.cur_bus_dir(dfi_odt0 ? `BUS_DIR_WRITE : `BUS_DIR_READ),
+		
+		.maint_instr_en(maint_en),
+		.maint_ack(maint_ack),
+		.maint_instr(maint_instr),
+		
+		.maint_bank(maint_bank),
+		.maint_bank_state(maint_bank_state),
+		
+		.pr_rd_ack(pr_rd_ack), //comes from the transaction dispatcher
+		.zq_ack(zq_ack),
+		.autoref_ack(autoref_ack),
+		.periodic_read_lock(periodic_read_lock),
+		
+		.trfc(aref_trfc)
     );
 	 
 	 autoref_config i_aref_config(
@@ -147,20 +156,59 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		.trfc(aref_trfc)
 	 );
 	 
+	 wire app_en_buff2recv, app_ack_recv2buff;
+	 wire dispatcher_ready_buff2recv;//, end_of_loop;
+	 wire [31:0] app_instr_buff2recv;
+	 reg dispatcher_busy_r; 
+	 always @ (posedge clk)
+		dispatcher_busy_r <= dispatcher_busy;
+	 instr_buffer_wrapper i_instr_buffer_wrapper (
+		.clk(clk),
+		.rst(rst),
+		.fifo_full(iq_full),
+		.app_en_in(app_en),
+		.app_instr_in(app_instr),
+		.app_ack_in(app_ack_recv2buff),
+
+		.app_en_out(app_en_buff2recv),
+		.app_ack_out(app_ack),
+		.app_instr_out(app_instr_buff2recv), 
+
+		.dispatcher_busy(dispatcher_busy_r),
+		.dispatcher_ready(dispatcher_ready_buff2recv),
+	
+		.process_tr(process_iseq),
+		.looping(looping)
+	 );
+	
+	 bank_states i_bank_states (
+		.clk(clk), 
+		.rst(rst), 
+		.instr(issued_instr), 
+		.is_app(is_issued_app_instr),
+		.is_mnt(is_issued_mnt_instr),	 
+		.maint_bank(maint_bank), 
+		.maint_bank_state(maint_bank_state)
+     );
+	
 	 instr_receiver i_instr_recv(
 		.clk(clk),
 		.rst(rst),
 		
-		.dispatcher_ready(~dispatcher_busy),
-		.rdback_fifo_empty(rdback_fifo_empty),
+		.dispatcher_ready(dispatcher_ready_buff2recv),
+		.rdback_fifo_empty(1'b1),
 		
-		.app_en(app_en),
-		.app_ack(app_ack),
-		.app_instr(app_instr), 
+		.app_en(app_en_buff2recv),
+		.app_ack(app_ack_recv2buff),
+		.app_instr(app_instr_buff2recv), 
 		
 		.maint_en(maint_en),
 		.maint_ack(maint_ack),
 		.maint_instr(maint_instr),
+		
+		.issued_instr(issued_instr),
+		.is_issued_app_instr(is_issued_app_instr),
+		.is_issued_mnt_instr(is_issued_mnt_instr),
 		
 		.instr0_fifo_en(instr0_fifo_en),
 		.instr0_fifo_data(instr0_fifo_data),
@@ -172,8 +220,37 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		
 		.process_iseq(process_iseq),
 		.process_iseq_host(process_iseq_host)
-	);
+	 );
 	
+	`ifdef SIM
+		reg [31:0] instr0_fifo_size_r, instr1_fifo_size_r;
+		reg [31:0] instr0_fifo_size_ns, instr1_fifo_size_ns;
+		always @ (posedge clk) begin
+			if (rst) begin
+				instr0_fifo_size_r <= 0;
+				instr1_fifo_size_r <= 0;
+			end
+			else begin
+				instr0_fifo_size_r <= instr0_fifo_size_ns;
+				instr1_fifo_size_r <= instr1_fifo_size_ns;
+			end
+		end
+
+		always @ * begin
+			case ({instr0_fifo_en,instr0_fifo_rd_en})
+				2'b01  : instr0_fifo_size_ns = instr0_fifo_size_r - 1;
+				2'b10  : instr0_fifo_size_ns = instr0_fifo_size_r + 1;
+				default: instr0_fifo_size_ns = instr0_fifo_size_r;
+			endcase
+			
+			case ({instr1_fifo_en,instr1_fifo_rd_en})
+				2'b01  : instr1_fifo_size_ns = instr1_fifo_size_r - 1;
+				2'b10  : instr1_fifo_size_ns = instr1_fifo_size_r + 1;
+				default: instr1_fifo_size_ns = instr1_fifo_size_r;
+			endcase
+		end
+	`endif
+
 	instr_fifo i_instr0_fifo (
 	  .srst(rst), // input rst
 	  .clk(clk), // input clk
@@ -275,19 +352,19 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 
 	wire read_capturer_dfi_clk_disable;
 	read_capturer #(.DQ_WIDTH(DQ_WIDTH)) i_rd_capturer (
-	.clk(clk),
-	.rst(rst),
-	
-	//DFI Interface
-	.dfi_rddata(dfi_rddata),
-	.dfi_rddata_valid(dfi_rddata_valid),
-	.dfi_rddata_valid_even(dfi_rddata_valid_even),
-	.dfi_rddata_valid_odd(dfi_rddata_valid_odd),
-	
-	//FIFO interface
-	.rdback_fifo_wren(rdback_fifo_wren),
-	.rdback_fifo_wrdata(rdback_fifo_wrdata)
-);
+		.clk(clk),
+		.rst(rst),
+		
+		//DFI Interface
+		.dfi_rddata(dfi_rddata),
+		.dfi_rddata_valid(dfi_rddata_valid),
+		.dfi_rddata_valid_even(dfi_rddata_valid_even),
+		.dfi_rddata_valid_odd(dfi_rddata_valid_odd),
+		
+		//FIFO interface
+		.rdback_fifo_wren(rdback_fifo_wren),
+		.rdback_fifo_wrdata(rdback_fifo_wrdata)
+	);
 
 
 endmodule

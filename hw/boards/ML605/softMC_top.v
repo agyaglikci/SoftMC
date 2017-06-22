@@ -120,6 +120,7 @@ module softMC_top #
 	output										processing_iseq, //led 1
 	output 										iq_full, //led 2
 	output 										rdback_fifo_empty, //led 3
+	output 										looping, //led 7 
 	
 	//PCIE
 	
@@ -393,6 +394,7 @@ module softMC_top #
 	.app_instr(app_instr), 
 	.iq_full(iq_full),
 	.processing_iseq(processing_iseq),
+	.looping(looping),
 	
 	// DFI Control/Address
 	.dfi_address0(dfi_address0),

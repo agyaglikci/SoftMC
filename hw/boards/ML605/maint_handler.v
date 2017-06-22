@@ -2,7 +2,7 @@
 
 `include "softMC.inc"
 
-module maint_handler #(parameter CS_WIDTH = 1)(
+module maint_handler #(parameter CS_WIDTH = 1, BANK_WIDTH = 3, ROW_WIDTH = 16)(
 			input clk,
 			input rst,
 			
@@ -14,6 +14,9 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 			output maint_instr_en,
 			input maint_ack,
 			output reg[31:0] maint_instr,
+			
+			output [BANK_WIDTH - 1 : 0] maint_bank,
+			input  [ROW_WIDTH - 1  : 0] maint_bank_state,
 			
 			input pr_rd_ack, //comes from the instruction sequence (iseq) dispatcher
 			output reg zq_ack,
@@ -34,16 +37,19 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 	 wire maint_process;
 	 
 	 localparam PR_RD_IO = 4'b0000;
-	 localparam PR_RD_PRE = 4'b0001;
-	 localparam PR_RD_WAIT_PRE = 4'b0010;
-	 localparam PR_RD_ACT = 4'b0011;
-	 localparam PR_RD_WAIT_ACT = 4'b0100;
-	 localparam PR_RD_READ = 4'b0101;
-	 localparam PR_RD_WAIT_READ = 4'b0110;
-	 localparam PR_RD_PRE2 = 4'b0111;
-	 localparam PR_RD_WAIT_PRE2 = 4'b1000;
-	 localparam PR_RD_WR_IO = 4'b1001;
-	 localparam MAINT_FIN = 4'b1010;
+	 localparam PR_RD_WAIT_INIT = 4'b0001;
+	 localparam PR_RD_PRE = 4'b0010;
+	 localparam PR_RD_WAIT_PRE = 4'b0011;
+	 localparam PR_RD_ACT = 4'b0100;
+	 localparam PR_RD_WAIT_ACT = 4'b0101;
+	 localparam PR_RD_READ = 4'b0110;
+	 localparam PR_RD_WAIT_READ = 4'b0111;
+	 localparam PR_RD_PRE2 = 4'b1000;
+	 localparam PR_RD_WAIT_PRE2 = 4'b1001;
+	 localparam PR_RD_WR_IO = 4'b1010;
+	 localparam PR_RD_ACT_RECOVERY = 4'b1011;
+	 localparam PR_RD_WAIT_FIN = 4'b1011;
+	 localparam MAINT_FIN = 4'b1100;
 	 
 	 localparam ZQ_PRE = 4'b0000;
 	 localparam ZQ_WAIT_PRE = 4'b0001;
@@ -59,6 +65,8 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 	 
 	 reg lock_pr_rd_r, lock_pr_rd_ns;
 	 reg[1:0] cur_bus_dir_r, cur_bus_dir_ns;
+	 
+	 assign maint_bank = 0; //Currently supports only Periodic Read
 	 
 	 always@* begin
 		pr_rd_process_ns = pr_rd_process_r;
@@ -79,7 +87,7 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 		if(~maint_process) begin
 			if(pr_rd_req & ~lock_pr_rd_r) begin
 				pr_rd_process_ns = 1'b1;
-				maint_state_ns = PR_RD_IO;
+				maint_state_ns = PR_RD_WAIT_INIT;
 			end //pr_rd_req
 			else if(zq_req) begin
 				zq_process_ns = 1'b1;
@@ -101,9 +109,17 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 						cur_bus_dir_ns = cur_bus_dir;
 						
 						if(maint_ack)
-							maint_state_ns = PR_RD_PRE;
+							maint_state_ns = PR_RD_WAIT_INIT;
 					end //PR_RD_IO
-					
+
+					PR_RD_WAIT_INIT: begin
+						maint_instr[31:28] = `WAIT;
+						maint_instr[27:0] = `DEF_TRAS;
+
+						if(maint_ack)
+							maint_state_ns = PR_RD_PRE;
+					end //PR_RD_WAIT_INIT
+
 					PR_RD_PRE: begin
 					
 						//Precharge banks 0
@@ -189,17 +205,39 @@ module maint_handler #(parameter CS_WIDTH = 1)(
 						maint_instr[27:0] = `DEF_TRP;
 						
 						if(maint_ack)
-							maint_state_ns = (cur_bus_dir_r == `BUS_DIR_READ) ? MAINT_FIN : PR_RD_WR_IO;
+							maint_state_ns = (maint_bank_state[ROW_WIDTH-1])? PR_RD_ACT_RECOVERY : ((cur_bus_dir_r == `BUS_DIR_READ) ? MAINT_FIN : PR_RD_WR_IO);
 					end //PR_RD_WAIT_PRE2
-					
+
+					PR_RD_ACT_RECOVERY: begin
+						//activate bank 0, row 0
+						maint_instr[31:28] = `DDR_INSTR;
+						maint_instr[`CKE_OFFSET] = HIGH;
+						maint_instr[`CS_OFFSET +: CS_WIDTH] = {{CS_WIDTH-1{HIGH}}, LOW};
+						maint_instr[`RAS_OFFSET] = LOW;
+						maint_instr[`CAS_OFFSET] = HIGH;
+						maint_instr[`WE_OFFSET] = HIGH;
+						maint_instr[ROW_WIDTH-1:0] = maint_bank_state[ROW_WIDTH-1:0];
+						
+						if(maint_ack)
+							maint_state_ns = (cur_bus_dir_r == `BUS_DIR_READ) ? MAINT_FIN : PR_RD_WR_IO;
+					end //PR_RD_ACT_RECOVERY
+
 					PR_RD_WR_IO: begin
 						maint_instr[31:28] = `SET_BUSDIR;
 						maint_instr[1:0] = `BUS_DIR_WRITE;
 						
 						if(maint_ack)
-							maint_state_ns = MAINT_FIN;
-					end
+							maint_state_ns = PR_RD_WAIT_FIN;
+					end //PR_RD_WR_IO
 					
+					PR_RD_WAIT_FIN: begin
+						maint_instr[31:28] = `WAIT;
+						maint_instr[27:0] = (`DEF_TRCD > `DEF_TRP) ? `DEF_TRCD : `DEF_TRP;
+						
+						if(maint_ack)
+							maint_state_ns = MAINT_FIN;
+					end //PR_RD_WAIT_FIN
+			
 					MAINT_FIN: begin
 						maint_instr[31:28] = `END_ISEQ;
 						pr_rd_process_ns = 1'b0;
