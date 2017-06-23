@@ -22,7 +22,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "softMC.inc"
 module bank_states
-#(parameter ROW_WIDTH = 15, BANK_WIDTH = 3, CS_WIDTH = 1)
+#(parameter ROW_WIDTH = 16, BANK_WIDTH = 3, CS_WIDTH = 1)
 (
 	input wire clk, rst,
 	
@@ -31,9 +31,9 @@ module bank_states
 	input wire is_app, is_mnt,
 	
 	// Request from MAINT_HANDLR
-	input wire [BANK_WIDTH - 1 : 0] maint_bank,
+	input wire [BANK_WIDTH-1 : 0] maint_bank,
 	// Reply Message
-	output wire [ROW_WIDTH : 0] maint_bank_state
+	output wire [ROW_WIDTH-1 : 0] maint_bank_state
 );
 	
 	wire [BANK_WIDTH-1 : 0] bank_index;
@@ -41,13 +41,13 @@ module bank_states
 	wire is_act, is_pre;
 	
 	assign bank_index = instr[ROW_WIDTH +: BANK_WIDTH];
-	assign row_addr   = instr[ROW_WIDTH - 1 : 0];
+	assign row_addr   = instr[ROW_WIDTH-1: 0];
 	assign is_act = instr[31] && ~|instr[`CS_OFFSET +: CS_WIDTH] && ~instr[`RAS_OFFSET] && instr[`CAS_OFFSET] && instr[`WE_OFFSET];
 	assign is_pre = instr[31] && ~|instr[`CS_OFFSET +: CS_WIDTH] && ~instr[`RAS_OFFSET] && instr[`CAS_OFFSET] && ~instr[`WE_OFFSET];
 	
 	localparam NUM_BANKS = 1 << BANK_WIDTH;
-	reg [ROW_WIDTH : 0] last_rows_r [0:NUM_BANKS-1];
-	reg [ROW_WIDTH : 0] last_rows_ns;
+	reg [ROW_WIDTH-1 : 0] last_rows_r [0:NUM_BANKS-1];
+	reg [ROW_WIDTH-1 : 0] last_rows_ns;
 	always @ (posedge clk) begin
 		if (rst) begin
 			last_rows_r[0] <= 0;

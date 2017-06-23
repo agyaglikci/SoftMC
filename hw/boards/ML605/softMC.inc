@@ -1,6 +1,6 @@
 //uncomment the line below to run a simulation using "tb_softMC_top"
 //`define SIM
-
+`define LOOP_EN
 `define tCK 2500
 
 // instruction opcodes
@@ -10,7 +10,7 @@
 `define SET_TREFI 4'b0010
 `define SET_TRFC 4'b0011
 `define WAIT 4'b0100
-
+`define STOP 4'b0111
 
 
 `define ROW_OFFSET 16

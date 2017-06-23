@@ -65,10 +65,10 @@ module instr_buffer(
 	output wire looping
     );
 
-	localparam 	BRAM_MAX_ADDR	 	= 13'd8191,
-					ADDR_SIZE  		 	= 13,  
+	localparam 	BRAM_MAX_ADDR	 	= 12'd2047,
+					ADDR_SIZE  		 	= 12,  
 					CMD_SIZE   		 	= 32, 
-					INIT_SIZE		 	= 13'd512,
+					INIT_SIZE		 	= 12'd512,
 					STATE_IDLE 		 	= 3'b000, 
 					STATE_FILL 		 	= 3'b001,
 					STATE_SENDTR 	 	= 3'b010,
@@ -184,7 +184,12 @@ module instr_buffer(
 	///////////////////////////////////////////
 	// Counter Logic
 	///////////////////////////////////////////
-	buffer_bram_controller i_bram_controller (
+	buffer_bram_controller #(
+			.WIDTH(ADDR_SIZE), 
+			.MAX_ADDR(BRAM_MAX_ADDR),
+			.LOOP_START(INIT_SIZE)
+	)
+	i_bram_controller (
 		.clk(clk), .rst(rst), 
 		.wr_en(bram_wr_en), .app_en(app_en) ,
 		.wr_addr(bram_wr_addr), 

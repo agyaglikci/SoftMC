@@ -384,6 +384,8 @@ NET "iq_full" LOC = AE22;
 NET "iq_full" IOSTANDARD = LVCMOS25;
 NET "rdback_fifo_empty" LOC = AE23;
 NET "rdback_fifo_empty" IOSTANDARD = LVCMOS25;
+NET "looping" LOC = AD24;
+NET "looping" IOSTANDARD = LVCMOS25;
 #Bank 26
 NET "ddr_dqs_p[0]" LOC = D12;
 #Bank 26

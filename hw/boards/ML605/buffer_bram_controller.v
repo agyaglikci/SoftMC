@@ -28,7 +28,7 @@ module buffer_bram_controller(
 	app_en_o, rd_addr_a, rd_addr_b, end_of_loop, instr_sel, buffer_reset  // read cntrl output 
 	);
 	
-	parameter WIDTH = 13, MAX_ADDR = 8191, LOOP_START = 512;
+	parameter WIDTH = 11, MAX_ADDR = 2047, LOOP_START = 512;
 	
 	input  wire clk, rst, last_loop, wr_en, app_en, loop_en;
 	input  wire app_ack, fifo_ready, looping;
