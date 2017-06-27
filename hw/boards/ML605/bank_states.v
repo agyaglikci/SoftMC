@@ -33,7 +33,7 @@ module bank_states
 	// Request from MAINT_HANDLR
 	input wire [BANK_WIDTH-1 : 0] maint_bank,
 	// Reply Message
-	output wire [ROW_WIDTH-1 : 0] maint_bank_state
+	output wire [ROW_WIDTH : 0] maint_bank_state
 );
 	
 	wire [BANK_WIDTH-1 : 0] bank_index;
