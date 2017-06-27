@@ -202,9 +202,9 @@ module tb_softMC_top;
   //**************************************************************************//
   // Wire Declarations
   //**************************************************************************//
-  reg app_en;
+  wire app_en;
   wire app_ack;
-  reg[31:0] app_instr; 
+  wire[31:0] app_instr; 
   wire iq_full;
   wire processing_iseq;
 		
@@ -275,6 +275,7 @@ module tb_softMC_top;
 
 
   wire                               clk;
+  wire										 softmc_clk;
   wire                               rst;
   wire                               app_sz;
   wire [ADDR_WIDTH-1:0]              app_addr;
@@ -496,6 +497,7 @@ module tb_softMC_top;
 		.iq_full(iq_full),
 		.processing_iseq(processing_iseq),
 		
+		.softmc_clk(softmc_clk),
 		.app_en(app_en),
 		.app_ack(app_ack),
 		.app_instr(app_instr),
@@ -802,117 +804,116 @@ module tb_softMC_top;
     end
   endgenerate
 	
+  reg cg_en , cg_stall, cg_stop, cg_rst;
+  localparam [31:0] NUM_INSTR = 32'd265;
+  instr_feeder #(.NUM_INSTR(NUM_INSTR))i_instr_feeder(
+		.clk(softmc_clk), .rst(cg_rst), 
+		.en(cg_en), 
+		.app_ack(app_ack),
+		.stall(cg_stall),
+		.stop(cg_stop),
+		.command(app_instr), 
+		.app_en(app_en)
+	);
+  
+  initial begin
+		cg_en    = 1'b0;
+		cg_stall = 1'b1;
+		cg_stop  = 1'b0;
+		cg_rst   = 1'b1;
+		wait(phy_init_done);
+		@(negedge softmc_clk);
+		cg_rst   = 1'b0;
+		
+		repeat (10) @(negedge softmc_clk);
+		cg_en = 1'b1;	
+		@(negedge softmc_clk); 
+		cg_en=1'b0;
 
-	//***************************************************************************
-  // Reporting the test case status
-  //***************************************************************************
-  localparam APP_CLK_PERIOD = tCK * nCK_PER_CLK;
-  initial
-  begin : Logging
-		app_en = 0;
-		rdback_fifo_rden = 0;
-        begin : calibration_done
-           wait (phy_init_done);
-           $display("Calibration Done");
-			  
-           #1000000;
-			  
-			  
-	  app_en = 0;
-	  #(APP_CLK_PERIOD*1000);
-	  
-	  #APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b00010000000000000000000000000010; //busdir
+		repeat(30 * NUM_INSTR) @(negedge softmc_clk);
+		cg_stop = 1'b1;
+		@(negedge softmc_clk); 
+		cg_stop = 1'b0;
+		
+		repeat (2 * NUM_INSTR) @(negedge softmc_clk);
+		
+		$stop;
+		
+	end
 
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101; //wait
+endmodule
 
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10010001000100110000000000000000; //act
+module instr_feeder 
+#(parameter [31:0] NUM_INSTR = 2048)
+(
+	input wire clk, rst,
+	input wire en, 
+	input wire stall,
+	input wire stop,
+	input wire app_ack,
+	
+	output wire [31:0] command,
+	output reg app_en
+);
+	
+	// State Machine 
+	localparam IDLE = 2'b00, RUN = 2'b01, HOLD = 2'b10;
+	reg [1:0] state_r, state_n;
 
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000110; //wait
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10010001000110110000000010110010; //read
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101; //wait
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10101101001000111000000000001110;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000110;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b11010011001000110100000000001000;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000001010;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10010001000100110000000000000000;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b00010000000000000000000000000000;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10010001000110110000000010110010;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10000001001010110000000000001000;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000001010;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000011;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b10010001000100110000000000000000;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b01000000000000000000000000000101;
-
-		#APP_CLK_PERIOD;
-		app_en = 1;
-		app_instr = 32'b00000000000000000000000000000000;
-
-		#APP_CLK_PERIOD;
-		app_en = 0;
-        end
-  end
-      
+	always @ (posedge clk) begin
+		if (rst) begin
+			state_r <= IDLE;
+			pc_r <= 0;
+		end
+		else begin
+			state_r <= state_n;
+			pc_r <= pc_n;
+		end
+	end
+	
+	// Combinational Logic
+	reg  [31:0] mem [0:2047] ;
+	reg  [31:0] pc_r, pc_n;
+	always @ * begin
+	pc_n = pc_r;
+	state_n = state_r;
+		case (state_r) 
+			IDLE: begin
+				pc_n = 0;
+				if (en) begin
+					state_n = RUN;
+				end
+			end
+			RUN: begin
+				if (app_ack) begin
+					pc_n = pc_r + 1;
+					if (pc_r == NUM_INSTR) begin
+						state_n = IDLE;
+					end
+				end
+			end
+		endcase
+		if (stop) begin
+			state_n = IDLE;
+			pc_n = 0;
+		end
+	end
+	
+	initial begin
+		$readmemb("tb_instructions", mem); // memory_list is memory file
+	end
+	
+	assign command =	 stop  ? {`STOP,28'hAAAAAAA}:
+							(state_r == RUN) ? mem[pc_r] : 
+							{`WAIT,28'hXXXXXXX};
+	
+	// Output Logic 
+	initial begin
+		app_en = 1'b0;
+		state_r = IDLE;
+	end
+	always @ * begin
+		app_en = (state_r == RUN) |  stop ;
+	end
 endmodule
 
