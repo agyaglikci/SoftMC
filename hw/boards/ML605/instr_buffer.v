@@ -65,10 +65,10 @@ module instr_buffer(
 	output wire looping
     );
 
-	localparam 	BRAM_MAX_ADDR	 	= 12'd2047,
-					ADDR_SIZE  		 	= 12,  
+	localparam 	BRAM_MAX_ADDR	 	= 11'd2047,
+					ADDR_SIZE  		 	= 11,  
 					CMD_SIZE   		 	= 32, 
-					INIT_SIZE		 	= 12'd512,
+					INIT_SIZE		 	= 11'd512,
 					STATE_IDLE 		 	= 3'b000, 
 					STATE_FILL 		 	= 3'b001,
 					STATE_SENDTR 	 	= 3'b010,
