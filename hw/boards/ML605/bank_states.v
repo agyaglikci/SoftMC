@@ -46,8 +46,8 @@ module bank_states
 	assign is_pre = instr[31] && ~|instr[`CS_OFFSET +: CS_WIDTH] && ~instr[`RAS_OFFSET] && instr[`CAS_OFFSET] && ~instr[`WE_OFFSET];
 	
 	localparam NUM_BANKS = 1 << BANK_WIDTH;
-	reg [ROW_WIDTH-1 : 0] last_rows_r [0:NUM_BANKS-1];
-	reg [ROW_WIDTH-1 : 0] last_rows_ns;
+	reg [ROW_WIDTH : 0] last_rows_r [0:NUM_BANKS-1];
+	reg [ROW_WIDTH : 0] last_rows_ns;
 	always @ (posedge clk) begin
 		if (rst) begin
 			last_rows_r[0] <= 0;
