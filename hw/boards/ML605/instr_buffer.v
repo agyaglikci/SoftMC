@@ -61,7 +61,7 @@ module instr_buffer(
 //	output wire end_of_loop,
 //	output wire [10:0] read_max_addr,
 //	output wire loop_flag,
-//	output wire [2:0] state,
+	output wire [2:0] state_out,
 	output wire looping
     );
 
@@ -147,7 +147,7 @@ module instr_buffer(
 	assign looping = (state_r == STATE_INF_LOOP)
 						| (state_r == STATE_LAST_LOOP)
 						| (state_r == STATE_LAST_SENDTR);
-//	assign state = state_r;
+	assign state_out = state_r;
 
 	///////////////////////////////////////////
 	// Block RAM I/O Logic
@@ -196,7 +196,7 @@ module instr_buffer(
 		.full(bram_full), .last_in_init(last_in_init),
 		.last_loop(state_r == STATE_LAST_SENDTR | state_r == STATE_LAST_LOOP), 
 		.loop_en(loop_en), .app_ack(app_ack_in), 
-		.fifo_ready(fifo_ready), .looping(looping), 
+		.fifo_ready(fifo_ready), .looping(looping),
 		.rd_addr_a(bram_rd_addr_a), .rd_addr_b(bram_rd_addr_b), 
 		.end_of_loop(end_of_loop),
 		.app_en_o(app_instr_ready),
@@ -226,6 +226,7 @@ module instr_buffer_wrapper (
 	output wire [31:0] app_instr_out, 
 	
 	output wire dispatcher_ready,
+	output wire [2:0] state_out,
 	output wire looping
 );
 
@@ -254,6 +255,7 @@ module instr_buffer_wrapper (
 		 .app_instr_ready(app_en_buff_out), 
 		 .fake_dispatcher_ready(dispatcher_ready_buff_out), 
 		 .app_ack(app_ack_buff_out),
+		 .state_out(state_out),
 		 .looping(looping_ns)
 		 );
 `endif
@@ -267,10 +269,11 @@ module instr_buffer_wrapper (
 	assign app_ack_out		= app_ack_buff_out; 				//first_loop ?  app_ack_in		   : app_ack_buff_out;
 `else
 	assign app_en_out   		=  app_en_in   	;
-	assign app_instr_out  		=  app_instr_in  	; 
+	assign app_instr_out    =  app_instr_in  	; 
 	assign dispatcher_ready = ~dispatcher_busy;
 	assign app_ack_out		=  app_ack_in		;
 	assign looping 			=  1'b0				;
+	assign state_out        =  3'b111         ;
 `endif
 	endmodule
 	

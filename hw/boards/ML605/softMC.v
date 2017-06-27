@@ -15,6 +15,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	output iq_full,
 	output processing_iseq,
 	output looping,
+	output [2:0] instr_buffer_state,
 	
 	// DFI Control/Address
 	output [ROW_WIDTH-1:0]              dfi_address0,
@@ -177,6 +178,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		.dispatcher_ready(dispatcher_ready_buff2recv),
 	
 		.process_tr(process_iseq),
+		.state_out(instr_buffer_state),
 		.looping(looping)
 	 );
 	

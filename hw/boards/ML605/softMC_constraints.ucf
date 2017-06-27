@@ -384,6 +384,12 @@ NET "iq_full" LOC = AE22;
 NET "iq_full" IOSTANDARD = LVCMOS25;
 NET "rdback_fifo_empty" LOC = AE23;
 NET "rdback_fifo_empty" IOSTANDARD = LVCMOS25;
+NET "instr_buffer_state[0]" LOC = AB23;
+NET "instr_buffer_state[0]" IOSTANDARD = LVCMOS25;
+NET "instr_buffer_state[1]" LOC = AG23;
+NET "instr_buffer_state[1]" IOSTANDARD = LVCMOS25;
+NET "instr_buffer_state[2]" LOC = AE24;
+NET "instr_buffer_state[2]" IOSTANDARD = LVCMOS25;
 NET "looping" LOC = AD24;
 NET "looping" IOSTANDARD = LVCMOS25;
 #Bank 26

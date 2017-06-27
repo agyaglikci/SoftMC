@@ -120,6 +120,7 @@ module softMC_top #
 	output										processing_iseq, //led 1
 	output 										iq_full, //led 2
 	output 										rdback_fifo_empty, //led 3
+	output [2:0]							  instr_buffer_state, // leds[6:4]
 	output 										looping, //led 7 
 	
 	//PCIE
@@ -136,7 +137,8 @@ module softMC_top #
 	input  app_en,
 	output app_ack,
 	input[31:0] app_instr,
-
+   output softmc_clk,
+	
 	//Data read back Interface
 	//output rdback_fifo_empty,
 	input rdback_fifo_rden,
@@ -378,6 +380,8 @@ module softMC_top #
 	//Data read back Interface
 	wire rdback_fifo_rden;
 	wire[DQ_WIDTH*4 - 1:0] rdback_data;
+	`else
+	assign softmc_clk = clk;
 	`endif //SIM
 	
 	wire process_iseq_host;
@@ -393,6 +397,7 @@ module softMC_top #
 	.app_instr(app_instr), 
 	.iq_full(iq_full),
 	.processing_iseq(processing_iseq),
+	.instr_buffer_state(instr_buffer_state),
 	.looping(looping),
 	
 	// DFI Control/Address
