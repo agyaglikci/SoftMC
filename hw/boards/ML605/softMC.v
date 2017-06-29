@@ -53,6 +53,9 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	output                              io_config_strobe,
 	output [RANK_WIDTH:0]               io_config,
 	
+	// debug signal
+	output [33:0] issued_instr_dbg,
+	
 	//Data read back Interface
 	output rdback_fifo_empty,
 	input rdback_fifo_rden,
@@ -121,7 +124,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		.clk(clk),
 		.rst(rst),
 		
-		.pr_rd_req(pr_rd_req_handler_in),
+		.pr_rd_req(pr_rd_req),
 		.zq_req(zq_req),
 		.autoref_req(autoref_req),
 		.cur_bus_dir(dfi_odt0 ? `BUS_DIR_WRITE : `BUS_DIR_READ),
@@ -191,7 +194,9 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		.maint_bank(maint_bank), 
 		.maint_bank_state(maint_bank_state)
      );
-	
+	 
+	 // debug signal
+	 assign issued_instr_dbg = {is_issued_app_instr,is_issued_mnt_instr,issued_instr};
 	 instr_receiver i_instr_recv(
 		.clk(clk),
 		.rst(rst),

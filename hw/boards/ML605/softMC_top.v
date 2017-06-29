@@ -4,21 +4,21 @@
 
 module softMC_top #
   (
-	parameter TCQ             = 100,
-	parameter tCK = 2500, //ps, TODO: let memory clok be 400 Mhz for now
-	parameter nCK_PER_CLK     = 2,       // # of memory clocks per CLK
-	parameter REFCLK_FREQ     = 200.0,   // IODELAY Reference Clock freq (MHz)
-	parameter DRAM_TYPE       = "DDR3",  // Memory I/F type: "DDR3", "DDR2"
-	parameter RST_ACT_LOW = 0,
-	parameter INPUT_CLK_TYPE = "DIFFERENTIAL",
+	 parameter TCQ             = 100,
+	 parameter tCK = 2500, //ps, TODO: let memory clok be 400 Mhz for now
+	 parameter nCK_PER_CLK     = 2,       // # of memory clocks per CLK
+	 parameter REFCLK_FREQ     = 200.0,   // IODELAY Reference Clock freq (MHz)
+	 parameter DRAM_TYPE       = "DDR3",  // Memory I/F type: "DDR3", "DDR2"
+	 parameter RST_ACT_LOW = 0,
+	 parameter INPUT_CLK_TYPE = "DIFFERENTIAL",
 
-	parameter CLKFBOUT_MULT_F =6,
-	parameter DIVCLK_DIVIDE = 1,
-	parameter CLKOUT_DIVIDE = 3,
+	 parameter CLKFBOUT_MULT_F =6,
+	 parameter DIVCLK_DIVIDE = 1,
+	 parameter CLKOUT_DIVIDE = 3,
 	 
-	// Slot Conifg parameters
-	parameter [7:0] SLOT_0_CONFIG = 8'b0000_0001,
-	parameter [7:0] SLOT_1_CONFIG = 8'b0000_0000,
+	 // Slot Conifg parameters
+	 parameter [7:0] SLOT_0_CONFIG = 8'b0000_0001,
+	 parameter [7:0] SLOT_1_CONFIG = 8'b0000_0000,
     // DRAM bus widths
     parameter BANK_WIDTH      = 3,       // # of bank bits
     parameter CK_WIDTH        = 2,       // # of CK/CK# outputs to memory
@@ -385,8 +385,9 @@ module softMC_top #
 	`endif //SIM
 	
 	wire process_iseq_host;
+	wire [33:0] issued_instr_dbg;
 	
-	 softMC #(.TCQ(TCQ), .tCK(tCK), .nCK_PER_CLK(nCK_PER_CLK), .RANK_WIDTH(RANK_WIDTH), .ROW_WIDTH(ROW_WIDTH), .BANK_WIDTH(BANK_WIDTH), 
+	softMC #(.TCQ(TCQ), .tCK(tCK), .nCK_PER_CLK(nCK_PER_CLK), .RANK_WIDTH(RANK_WIDTH), .ROW_WIDTH(ROW_WIDTH), .BANK_WIDTH(BANK_WIDTH), 
 								.CKE_WIDTH(CKE_WIDTH), .CS_WIDTH(CS_WIDTH), .nCS_PER_RANK(nCS_PER_RANK), .DQ_WIDTH(DQ_WIDTH)) i_softmc(
 	.clk(clk),
 	.rst(rst),
@@ -436,6 +437,9 @@ module softMC_top #
 	.io_config_strobe(io_config_strobe),
 	.io_config(io_config),
 	
+	// debug signal
+	.issued_instr_dbg(issued_instr_dbg),
+	
 	//Data read back Interface
 	.rdback_fifo_empty(rdback_fifo_empty),
 	.rdback_fifo_rden(rdback_fifo_rden),
@@ -472,6 +476,43 @@ riffa_top_v6_pcie_v2_5 #(
 	
 	.process_iseq(process_iseq_host)
 );
+
+`ifdef RIFFA_DBG
+wire [33:0] data0, data1;
+wire [7:0] data2;
+wire [35:0] control_riffa_dbg, control_recv_dbg, control_led_dbg;
+
+assign data0 = {app_en, app_ack, app_instr};
+assign data1 = issued_instr_dbg;
+assign data2 = {dfi_init_complete, processing_iseq, iq_full, rdback_fifo_empty, instr_buffer_state, looping};
+
+
+riffa_dbg i_riffa_dbg (
+    .CONTROL(control_riffa_dbg), // INOUT BUS [35:0]
+    .CLK(clk), // IN
+    .DATA(data0), // IN BUS [33:0]
+    .TRIG0({app_en, app_ack}) // IN BUS [1:0]
+);
+
+riffa_dbg i_recv_dbg (
+    .CONTROL(control_recv_dbg), // INOUT BUS [35:0]
+    .CLK(clk), // IN
+    .DATA(data0), // IN BUS [33:0]
+    .TRIG0(data1[33:32]) // IN BUS [1:0]
+);
+
+led_dbg i_led_dbg (
+    .CONTROL(control_led_dbg), // INOUT BUS [35:0]
+    .CLK(clk), // IN
+    .TRIG0(data2) // IN BUS [7:0]
+);
+
+icon i_icon (
+    .CONTROL0(control_riffa_dbg), // INOUT BUS [35:0]
+	 .CONTROL1(control_recv_dbg), // INOUT BUS [35:0]
+	 .CONTROL2(control_led_dbg) // INOUT BUS [35:0]
+);
+`endif //RIFFA_DBG
 
 `endif //SIM
 
