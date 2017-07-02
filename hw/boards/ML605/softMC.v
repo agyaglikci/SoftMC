@@ -258,7 +258,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	`endif
 
 	instr_fifo i_instr0_fifo (
-	  .srst(rst), // input rst
+	  .rst(rst), // input rst
 	  .clk(clk), // input clk
 	  .din(instr0_fifo_data), // input [31 : 0] din
 	  .wr_en(instr0_fifo_en), // input wr_en
@@ -269,7 +269,7 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	);
 	
 	instr_fifo i_instr1_fifo (
-	  .srst(rst), // input rst
+	  .rst(rst), // input rst
 	  .clk(clk), // input clk
 	  .din(instr1_fifo_data), // input [31 : 0] din
 	  .wr_en(instr1_fifo_en), // input wr_en

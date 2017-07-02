@@ -497,7 +497,7 @@ riffa_dbg i_riffa_dbg (
 riffa_dbg i_recv_dbg (
     .CONTROL(control_recv_dbg), // INOUT BUS [35:0]
     .CLK(clk), // IN
-    .DATA(data0), // IN BUS [33:0]
+    .DATA(data1), // IN BUS [33:0]
     .TRIG0(data1[33:32]) // IN BUS [1:0]
 );
 
