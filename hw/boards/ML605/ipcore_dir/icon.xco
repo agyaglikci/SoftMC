@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.6
-# Date: Thu Jun 29 16:47:56 2017
+# Date: Sun Jul  2 21:55:14 2017
 #
 ##############################################################
 #
@@ -43,7 +43,7 @@ CSET component_name=icon
 CSET constraint_type=external
 CSET enable_jtag_bufg=true
 CSET example_design=false
-CSET number_control_ports=3
+CSET number_control_ports=5
 CSET use_ext_bscan=false
 CSET use_softbscan=false
 CSET use_unused_bscan=false
@@ -53,4 +53,4 @@ CSET user_scan_chain=USER1
 MISC pkg_timestamp=2013-06-08T17:28:33Z
 # END Extra information
 GENERATE
-# CRC:  468fab5
+# CRC: 679b0a31

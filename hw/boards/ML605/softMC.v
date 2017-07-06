@@ -56,6 +56,10 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 	// debug signal
 	output [33:0] issued_instr_dbg,
 	
+	`ifdef FIFO_DBG
+	output wire [65:0] fifo_dbg_0, fifo_dbg_1,
+	`endif
+
 	//Data read back Interface
 	output rdback_fifo_empty,
 	input rdback_fifo_rden,
@@ -257,6 +261,30 @@ module softMC #(parameter TCQ = 100, tCK = 2500, nCK_PER_CLK = 2, RANK_WIDTH = 1
 		end
 	`endif
 
+	`ifdef FIFO_DBG
+	reg [67:0] fifo_dbg_r0, fifo_dbg_r1;
+	always @ (posedge clk) begin
+		fifo_dbg_r0 <= {
+			instr0_fifo_en,
+			instr0_fifo_rd_en,
+			instr0_fifo_full,
+			instr0_fifo_empty,
+			instr0_fifo_data,
+			instr0_fifo_out
+		};
+		
+		fifo_dbg_r1 <= {
+			instr1_fifo_en,
+			instr1_fifo_rd_en,
+			instr1_fifo_full,
+			instr1_fifo_empty,
+			instr1_fifo_data,
+			instr1_fifo_out
+		};
+	end	
+	assign fifo_dbg_0 = fifo_dbg_r0;
+	assign fifo_dbg_1 = fifo_dbg_r0;
+	`endif
 	instr_fifo i_instr0_fifo (
 	  .rst(rst), // input rst
 	  .clk(clk), // input clk

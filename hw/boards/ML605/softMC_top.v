@@ -146,7 +146,12 @@ module softMC_top #
 
 	`endif //SIM
     );
-	 
+	 wire dfi_init_complete_in;
+	 reg dfi_init_complete_r;
+	 assign dfi_init_complete = dfi_init_complete_r;
+	 always @ (posedge clk)
+		dfi_init_complete_r <= (rst)? 1'b0 : dfi_init_complete_in;
+		
 	 assign ddr_dm = {DM_WIDTH{1'b0}};
 	 
 	 /*** CLOCK MANAGEMENT ***/
@@ -340,7 +345,7 @@ module softMC_top #
     .dfi_rddata_valid(dfi_rddata_valid), 
 	 .dfi_rddata_valid_even(dfi_rddata_valid_even),
     .dfi_rddata_valid_odd(dfi_rddata_valid_odd), 
-    .dfi_init_complete(dfi_init_complete), 
+    .dfi_init_complete(dfi_init_complete_in), 
 	 
 	 //sideband signals
     .io_config_strobe(io_config_strobe), //input
@@ -385,7 +390,12 @@ module softMC_top #
 	`endif //SIM
 	
 	wire process_iseq_host;
+	`ifdef RECV_DBG
 	wire [33:0] issued_instr_dbg;
+	`endif
+	`ifdef FIFO_DBG
+	wire [67:0] fifo_dbg_0, fifo_dbg_1;
+	`endif
 	
 	softMC #(.TCQ(TCQ), .tCK(tCK), .nCK_PER_CLK(nCK_PER_CLK), .RANK_WIDTH(RANK_WIDTH), .ROW_WIDTH(ROW_WIDTH), .BANK_WIDTH(BANK_WIDTH), 
 								.CKE_WIDTH(CKE_WIDTH), .CS_WIDTH(CS_WIDTH), .nCS_PER_RANK(nCS_PER_RANK), .DQ_WIDTH(DQ_WIDTH)) i_softmc(
@@ -438,8 +448,12 @@ module softMC_top #
 	.io_config(io_config),
 	
 	// debug signal
+	`ifdef RECV_DBG
 	.issued_instr_dbg(issued_instr_dbg),
-	
+	`endif
+	`ifdef FIFO_DBG
+	.fifo_dbg_0(fifo_dbg_0), .fifo_dbg_1(fifo_dbg_1),
+	`endif
 	//Data read back Interface
 	.rdback_fifo_empty(rdback_fifo_empty),
 	.rdback_fifo_rden(rdback_fifo_rden),
@@ -494,12 +508,30 @@ riffa_dbg i_riffa_dbg (
     .TRIG0({app_en, app_ack}) // IN BUS [1:0]
 );
 
+`ifdef RECV_DBG
 riffa_dbg i_recv_dbg (
     .CONTROL(control_recv_dbg), // INOUT BUS [35:0]
     .CLK(clk), // IN
     .DATA(data1), // IN BUS [33:0]
     .TRIG0(data1[33:32]) // IN BUS [1:0]
 );
+`endif
+`ifdef FIFO_DBG
+wire [35:0] control_fifo0_dbg, control_fifo1_dbg;
+fifo_dbg_ila fifo0_dbg_ila (
+	 .CONTROL(control_fifo0_dbg), // INOUT BUS [35:0]
+    .CLK(clk), // IN
+    .DATA(fifo_dbg_0), // IN BUS [33:0]
+    .TRIG0(fifo_dbg_0[67:66]) // IN BUS [1:0]
+);
+
+fifo_dbg_ila fifo1_dbg_ila (
+	 .CONTROL(control_fifo1_dbg), // INOUT BUS [35:0]
+    .CLK(clk), // IN
+    .DATA(fifo_dbg_1), // IN BUS [33:0]
+    .TRIG0(fifo_dbg_1[67:66]) // IN BUS [1:0]
+);
+`endif
 
 led_dbg i_led_dbg (
     .CONTROL(control_led_dbg), // INOUT BUS [35:0]
@@ -510,7 +542,9 @@ led_dbg i_led_dbg (
 icon i_icon (
     .CONTROL0(control_riffa_dbg), // INOUT BUS [35:0]
 	 .CONTROL1(control_recv_dbg), // INOUT BUS [35:0]
-	 .CONTROL2(control_led_dbg) // INOUT BUS [35:0]
+	 .CONTROL2(control_led_dbg), // INOUT BUS [35:0]
+	 .CONTROL3(control_fifo0_dbg), // INOUT BUS [35:0]
+	 .CONTROL4(control_fifo1_dbg) // INOUT BUS [35:0]
 );
 `endif //RIFFA_DBG
 

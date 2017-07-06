@@ -1,7 +1,11 @@
 //uncomment the line below to run a simulation using "tb_softMC_top"
 //`define SIM
 `define LOOP_EN
-//`define RIFFA_DBG
+`define RIFFA_DBG
+`define LED_DBG
+`define RECV_DBG
+`define FIFO_DBG
+`define DISP_DBG
 `define tCK 2500
 
 // instruction opcodes
