@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.7
-# Date: Fri Jun 23 22:40:38 2017
+# Date: Thu Jul  6 22:14:21 2017
 #
 ##############################################################
 #
@@ -62,8 +62,8 @@ CSET interface_type=Native
 CSET load_init_file=false
 CSET mem_file=no_Mem_file_loaded
 CSET memory_type=True_Dual_Port_RAM
-CSET operating_mode_a=NO_CHANGE
-CSET operating_mode_b=NO_CHANGE
+CSET operating_mode_a=READ_FIRST
+CSET operating_mode_b=READ_FIRST
 CSET output_reset_value_a=0
 CSET output_reset_value_b=0
 CSET pipeline_stages=0
@@ -105,4 +105,4 @@ CSET write_width_b=32
 MISC pkg_timestamp=2012-11-19T16:22:25Z
 # END Extra information
 GENERATE
-# CRC: a98cde92
+# CRC: c01d59a4

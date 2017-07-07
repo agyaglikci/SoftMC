@@ -150,7 +150,7 @@ module softMC_top #
 	 reg dfi_init_complete_r;
 	 assign dfi_init_complete = dfi_init_complete_r;
 	 always @ (posedge clk)
-		dfi_init_complete_r <= (rst)? 1'b0 : dfi_init_complete_in;
+		dfi_init_complete_r <= (sys_rst)? 1'b0 : dfi_init_complete_in;
 		
 	 assign ddr_dm = {DM_WIDTH{1'b0}};
 	 
